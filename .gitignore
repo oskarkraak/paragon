@@ -1,4 +1,5 @@
 env.dart
+.firebase/
 
 # Miscellaneous
 *.class
