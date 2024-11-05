@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_soloud/flutter_soloud.dart';
@@ -99,7 +101,10 @@ void changeVoice() {
   print("Changed voice");
 }
 
-void main() {
+void main() async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 

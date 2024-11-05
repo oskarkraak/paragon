@@ -1,0 +1,1 @@
+{"hosting":{"source":".","ignore":["firebase.json","**/.*","**/node_modules/**"],"frameworksBackend":{"region":"europe-west1"}},"flutter":{"platforms":{"dart":{"lib/firebase_options.dart":{"projectId":"paragon-guide","configurations":{"web":"1:373426762614:web:f008ef0844cd5dff4ac057"}}}}}}
