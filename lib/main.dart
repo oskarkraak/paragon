@@ -125,9 +125,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'paragon',
+      title: 'paragon - alpha v1',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        colorScheme: ColorScheme(
+          brightness: Brightness.dark,
+          primary: Colors.deepPurple.shade900,
+          onPrimary: Colors.white,
+          secondary: Colors.teal.shade900,
+          onSecondary: Colors.white,
+          error: Colors.red.shade700,
+          onError: Colors.white,
+          background: Colors.black,
+          onBackground: Colors.grey.shade300,
+          surface: Colors.grey.shade800,
+          onSurface: Colors.grey.shade100,
+        ),
         useMaterial3: true,
       ),
       home: const ChatScreen(),
@@ -175,8 +187,14 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('paragon'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text('paragon'),
+            const Text('alpha v1', style: TextStyle(fontSize: 12)),
+          ],
+        ),
       ),
       body: Column(
         children: <Widget>[
@@ -186,20 +204,37 @@ class _ChatScreenState extends State<ChatScreen> {
               itemBuilder: (context, index) {
                 final message = _messages[index];
                 final isUserMessage = message["role"] == "user";
-                return Container(
-                  margin: const EdgeInsets.symmetric(
-                      vertical: 4.0, horizontal: 8.0),
-                  padding: const EdgeInsets.all(12.0),
-                  decoration: BoxDecoration(
-                    color: isUserMessage
-                        ? Colors.deepPurpleAccent.withOpacity(0.3)
-                        : Colors.grey.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: Text(
-                    message["content"] ?? "",
-                    style: TextStyle(
-                      color: isUserMessage ? Colors.black : Colors.black87,
+                return Align(
+                  alignment: isUserMessage
+                      ? Alignment.centerRight
+                      : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(
+                        vertical: 4.0, horizontal: 8.0),
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: isUserMessage
+                          ? Colors.teal.shade900
+                              .withOpacity(0.7) // AI message color
+                          : Colors.deepPurpleAccent
+                              .withOpacity(0.3), // User message color
+                      borderRadius: isUserMessage
+                          ? const BorderRadius.only(
+                              topLeft: Radius.circular(8.0),
+                              topRight: Radius.circular(8.0),
+                              bottomLeft: Radius.circular(8.0),
+                            )
+                          : const BorderRadius.only(
+                              topLeft: Radius.circular(8.0),
+                              topRight: Radius.circular(8.0),
+                              bottomRight: Radius.circular(8.0),
+                            ),
+                    ),
+                    child: Text(
+                      message["content"] ?? "",
+                      style: TextStyle(
+                        color: isUserMessage ? Colors.tealAccent : Colors.white,
+                      ),
                     ),
                   ),
                 );
