@@ -233,7 +233,9 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: Text(
                       message["content"] ?? "",
                       style: TextStyle(
-                        color: isUserMessage ? Colors.tealAccent : Colors.white,
+                        color: isUserMessage
+                            ? Colors.tealAccent
+                            : const Color.fromARGB(255, 242, 168, 255),
                       ),
                     ),
                   ),
