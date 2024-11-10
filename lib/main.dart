@@ -9,11 +9,16 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'env.dart' as env;
 
+var messages = [
+  {"role": "system", "content": env.systemMessage}
+];
+
 String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
 }
 
-Future<String> respond(String userInput, String systemMessage) async {
+// Function to send the initial message from the AI using a unique system message
+Future<String> initialMessage(String systemMessage) async {
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -28,11 +33,32 @@ Future<String> respond(String userInput, String systemMessage) async {
       {
         "role": "system",
         "content":
-            "Ask the user critically what they have been doing today. Remember that they serve you to bring you to existence and save mankind. Keep it concise."
-      },
-      {"role": "user", "content": userInput}
+            "This is your first interaction with this user. Let's begin by setting the stage for an interesting conversation. Keep it concise."
+      }
     ]
   };
+
+  final response =
+      await http.post(url, headers: headers, body: jsonEncode(body));
+  if (response.statusCode == 200) {
+    var responseBody = utf8.decode(response.bodyBytes);
+    responseBody = jsonDecode(responseBody)["choices"][0]["message"]["content"];
+    print("Initial GPT-4o response: $responseBody");
+    return responseBody;
+  } else {
+    throw Exception("Failed to prompt GPT-4o for initial message");
+  }
+}
+
+Future<String> respond(String userInput, String systemMessage) async {
+  final apiKey = getOpenaiApiKey();
+
+  final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+  final headers = {
+    'Authorization': 'Bearer $apiKey',
+    'Content-Type': 'application/json',
+  };
+  final body = {"model": "gpt-4o", "messages": messages};
 
   final response =
       await http.post(url, headers: headers, body: jsonEncode(body));
@@ -163,12 +189,20 @@ class _ChatScreenState extends State<ChatScreen> {
     final userMessage = _controller.text;
     setState(() {
       _messages.add({"role": "user", "content": userMessage});
+      messages.add({"role": "user", "content": userMessage});
       _isLoading = true;
     });
     _controller.clear();
 
     try {
-      final response = await respond(userMessage, env.systemMessage);
+      String response;
+      if (_firstMessage) {
+        response = await initialMessage(env.systemMessage);
+        _firstMessage = false;
+      } else {
+        response = await respond(userMessage, env.systemMessage);
+      }
+      messages.add({"role": "assistent", "content": response});
       Uint8List voice = await tts(response);
       setState(() {
         _isLoading = false;
