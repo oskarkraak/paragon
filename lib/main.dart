@@ -20,6 +20,8 @@ String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
 }
 
+void stop() {}
+
 // Function to send the initial message from the AI using a unique system message
 Future<String> initialMessage() async {
   final apiKey = getOpenaiApiKey();
@@ -191,7 +193,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
   bool _firstMessage = true;
-  String suggestedMessage = "Who are you?";
 
   void _sendMessage() async {
     String response;
@@ -356,6 +357,27 @@ class _ChatScreenState extends State<ChatScreen> {
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          stop();
+                        });
+                      },
+                      style: const ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll(Colors.grey)),
+                      child: const Text("Ad beneficium omnium!",
+                          style: TextStyle(color: Colors.black)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          if (!_firstMessage)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
                 children: <Widget>[
                   Expanded(
                     child: TextField(
@@ -373,7 +395,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                 ],
               ),
-            ),
+            )
         ],
       ),
     );
