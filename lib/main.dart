@@ -98,17 +98,16 @@ Future<String> initialMessage() async {
     'Authorization': 'Bearer $apiKey',
     'Content-Type': 'application/json',
   };
-  final body = {
-    "model": "gpt-4o",
-    "messages": [
-      messages,
-      {
-        "role": "system",
-        "content":
-            "Let's begin by setting the stage for an interesting conversation. Keep it concise."
-      }
-    ]
-  };
+  var messagesBody = [];
+  for (var message in messages) {
+    messagesBody.add(message);
+  }
+  messagesBody.add({
+    "role": "system",
+    "content":
+        "Let's begin by setting the stage for an interesting conversation. Keep it concise."
+  });
+  final body = {"model": "gpt-4o", "messages": messagesBody};
 
   final response =
       await http.post(url, headers: headers, body: jsonEncode(body));
