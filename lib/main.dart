@@ -12,6 +12,9 @@ import 'env.dart' as env;
 var messages = [
   {"role": "system", "content": env.systemMessage}
 ];
+bool _isLoading = false;
+late final String _firstText;
+late final Uint8List _firstTts;
 
 String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
@@ -135,7 +138,13 @@ void main() async {
   );
   SoLoud.instance.init();
   changeVoice();
+  prepareFirstMessage();
   runApp(const MyApp());
+}
+
+void prepareFirstMessage() async {
+  _firstText = await initialMessage();
+  _firstTts = await tts(_firstText);
 }
 
 void say(Uint8List audio) async {
@@ -149,7 +158,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'paragon - alpha v1',
+      title: 'paragon',
       theme: ThemeData(
         colorScheme: ColorScheme(
           brightness: Brightness.dark,
@@ -181,43 +190,44 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
-  bool _isLoading = false;
   bool _firstMessage = true;
   String suggestedMessage = "Who are you?";
 
   void _sendMessage() async {
-    if (_controller.text.isEmpty && !_firstMessage) return;
+    String response;
+    Uint8List voice;
+    if (_firstMessage) {
+      _firstMessage = false;
+      response = _firstText;
+      voice = _firstTts;
+    } else {
+      if (_controller.text.isEmpty) return;
 
-    final userMessage = _controller.text;
-    setState(() {
-      _messages.add({"role": "user", "content": userMessage});
-      messages.add({"role": "user", "content": userMessage});
-      _isLoading = true;
-    });
-    _controller.clear();
+      final userMessage = _controller.text;
+      setState(() {
+        _messages.add({"role": "user", "content": userMessage});
+        messages.add({"role": "user", "content": userMessage});
+        _isLoading = true;
+      });
+      _controller.clear();
 
-    try {
-      String response;
-      if (_firstMessage) {
-        response = await initialMessage();
-        _firstMessage = false;
-      } else {
+      try {
         response = await respond();
+        voice = await tts(response);
+      } catch (e) {
+        setState(() {
+          _messages.add({"role": "assistant", "content": "Error: $e"});
+          _isLoading = false;
+        });
+        return;
       }
-      messages.add({"role": "assistant", "content": response});
-      Uint8List voice = await tts(response);
-      setState(() {
-        _isLoading = false;
-      });
-      // Call method to display the response gradually
-      say(voice);
-      _addMessageGradually(response, "assistant");
-    } catch (e) {
-      setState(() {
-        _messages.add({"role": "assistant", "content": "Error: $e"});
-        _isLoading = false;
-      });
     }
+    messages.add({"role": "assistant", "content": response});
+    setState(() {
+      _isLoading = false;
+    });
+    say(voice);
+    _addMessageGradually(response, "assistant");
   }
 
   // Method to add message content gradually to simulate typing
@@ -227,18 +237,17 @@ class _ChatScreenState extends State<ChatScreen> {
       int delay;
       switch (content[i - 1]) {
         case ',':
-        case '-':
-        case '—':
         case ':':
           delay = 500;
           break;
         case '!':
         case '?':
         case '.':
+        case '—':
           delay = 1000;
           break;
         default:
-          delay = 50;
+          delay = 60;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
@@ -258,7 +267,7 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.primary,
-        title: Row(
+        title: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('paragon'),
@@ -316,52 +325,55 @@ class _ChatScreenState extends State<ChatScreen> {
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.all(8.0),
-              child: CircularProgressIndicator(),
+              child: CircularProgressIndicator(color: Colors.white),
             ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      setState(() {
-                        if (_firstMessage) {
-                          _sendMessage();
-                          suggestedMessage = "Ad beneficium omnium!";
-                        }
-                      });
-                    },
-                    style: const ButtonStyle(
-                        backgroundColor: WidgetStatePropertyAll(Colors.white)),
-                    child: Text(suggestedMessage,
-                        style: const TextStyle(color: Colors.black)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter your message...',
-                      border: OutlineInputBorder(),
+          if (_firstMessage)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        setState(() {
+                          if (_firstMessage) {
+                            _isLoading = true;
+                            _sendMessage();
+                          }
+                        });
+                      },
+                      style: const ButtonStyle(
+                          backgroundColor:
+                              WidgetStatePropertyAll(Colors.white)),
+                      child: const Text("Who are you?",
+                          style: TextStyle(color: Colors.black)),
                     ),
-                    onSubmitted: (_) => _sendMessage(),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
+          if (!_firstMessage)
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: const InputDecoration(
+                        hintText: 'Enter your message...',
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.send),
+                    onPressed: _sendMessage,
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
