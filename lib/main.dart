@@ -24,6 +24,10 @@ String getOpenaiApiKey() {
 }
 
 void stop(BuildContext context) async {
+  String newMemory = await updateMemory();
+  await prefs.setString('memory', newMemory);
+  print("Memory updated to: $newMemory");
+
   // Show a dialog asking the user if they want to modify the memory string
   showDialog(
     context: context, // You need to pass the context from where you call stop
@@ -33,20 +37,21 @@ void stop(BuildContext context) async {
         content: Text('Do you want to modify the memory?'),
         actions: <Widget>[
           TextButton(
-            onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
-            child: Text('No'),
-          ),
+              onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
+              child: const Text('No', style: TextStyle(color: Colors.white))),
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop(); // Close the dialog
               // Show input dialog for editing the memory
-              String? newMemory = await _editMemoryDialog(context, memory);
-              if (newMemory != null && newMemory.isNotEmpty) {
-                await prefs.setString('memory', newMemory);
-                print("Memory updated to: $newMemory");
+              String? editedMemory =
+                  await _editMemoryDialog(context, newMemory);
+              if (editedMemory != null) {
+                newMemory = editedMemory;
               }
+              await prefs.setString('memory', newMemory);
+              print("Memory updated to: $newMemory");
             },
-            child: Text('Yes'),
+            child: Text('Yes', style: TextStyle(color: Colors.white)),
           ),
         ],
       );
@@ -129,14 +134,20 @@ Future<String> updateMemory() async {
     'Authorization': 'Bearer $apiKey',
     'Content-Type': 'application/json',
   };
-  final body = {"model": "gpt-4o", "messages": messages};
+  var messagesBody = messages;
+  messagesBody.add({
+    "role": "system",
+    "content":
+        "You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory"
+  });
+  final body = {"model": "gpt-4o", "messages": messagesBody};
 
   final response =
       await http.post(url, headers: headers, body: jsonEncode(body));
   if (response.statusCode == 200) {
     var responseBody = utf8.decode(response.bodyBytes);
     responseBody = jsonDecode(responseBody)["choices"][0]["message"]["content"];
-    print("GPT-4o response: $responseBody");
+    print("GPT-4o response (new memory): $responseBody");
     return responseBody;
   } else {
     throw Exception("Failed to prompt GPT-4o");
@@ -352,7 +363,7 @@ class _ChatScreenState extends State<ChatScreen> {
           delay = 1000;
           break;
         default:
-          delay = 60;
+          delay = 55;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
@@ -441,10 +452,8 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          if (_firstMessage) {
-                            _isLoading = true;
-                            _sendMessage();
-                          }
+                          _isLoading = true;
+                          _sendMessage();
                         });
                       },
                       style: const ButtonStyle(
