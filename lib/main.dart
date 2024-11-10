@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -36,8 +37,8 @@ Future<String> respond(String userInput, String systemMessage) async {
   final response =
       await http.post(url, headers: headers, body: jsonEncode(body));
   if (response.statusCode == 200) {
-    final responseBody =
-        jsonDecode(response.body)["choices"][0]["message"]["content"];
+    var responseBody = utf8.decode(response.bodyBytes);
+    responseBody = jsonDecode(responseBody)["choices"][0]["message"]["content"];
     print("GPT-4o-mini response: $responseBody");
     return responseBody;
   } else {
@@ -172,13 +173,46 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final response = await respond(userMessage, env.systemMessage);
       setState(() {
-        _messages.add({"role": "assistant", "content": response});
         _isLoading = false;
       });
+      // Call method to display the response gradually
+      _addMessageGradually(response, "assistant");
     } catch (e) {
       setState(() {
         _messages.add({"role": "assistant", "content": "Error: $e"});
         _isLoading = false;
+      });
+    }
+  }
+
+  // Method to add message content gradually to simulate typing
+  Future<void> _addMessageGradually(String content, String role) async {
+    String displayedContent = content[0];
+    for (int i = 1; i < content.length; i++) {
+      int delay;
+      switch (content[i - 1]) {
+        case ',':
+        case '-':
+        case '—':
+          delay = 500;
+          break;
+        case '!':
+        case '?':
+        case '.':
+          delay = 1000;
+          break;
+        default:
+          delay = 100;
+      }
+      await Future.delayed(
+          Duration(milliseconds: delay)); // Delay to simulate typing
+      displayedContent += content[i];
+      setState(() {
+        if (_messages.isNotEmpty && _messages.last["role"] == role) {
+          _messages.last["content"] = displayedContent;
+        } else {
+          _messages.add({"role": role, "content": displayedContent});
+        }
       });
     }
   }
