@@ -321,6 +321,29 @@ class _ChatScreenState extends State<ChatScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        if (_firstMessage) {
+                          _sendMessage();
+                          suggestedMessage = "Ad beneficium omnium!";
+                        }
+                      });
+                    },
+                    style: const ButtonStyle(
+                        backgroundColor: WidgetStatePropertyAll(Colors.white)),
+                    child: Text(suggestedMessage,
+                        style: const TextStyle(color: Colors.black)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
               children: <Widget>[
                 Expanded(
                   child: TextField(
@@ -335,17 +358,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _sendMessage,
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      if (_firstMessage) {
-                        _sendMessage();
-                        suggestedMessage = "Ad beneficium omnium!";
-                      }
-                    });
-                  },
-                  child: Text(suggestedMessage),
                 ),
               ],
             ),
