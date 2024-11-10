@@ -18,7 +18,7 @@ String getOpenaiApiKey() {
 }
 
 // Function to send the initial message from the AI using a unique system message
-Future<String> initialMessage(String systemMessage) async {
+Future<String> initialMessage() async {
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -29,7 +29,7 @@ Future<String> initialMessage(String systemMessage) async {
   final body = {
     "model": "gpt-4o",
     "messages": [
-      {"role": "system", "content": systemMessage},
+      {"role": "system", "content": env.systemMessage},
       {
         "role": "system",
         "content":
@@ -50,7 +50,7 @@ Future<String> initialMessage(String systemMessage) async {
   }
 }
 
-Future<String> respond(String userInput, String systemMessage) async {
+Future<String> respond() async {
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -182,9 +182,11 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<Map<String, String>> _messages = [];
   final TextEditingController _controller = TextEditingController();
   bool _isLoading = false;
+  bool _firstMessage = true;
+  String suggestedMessage = "Who are you?";
 
   void _sendMessage() async {
-    if (_controller.text.isEmpty) return;
+    if (_controller.text.isEmpty && !_firstMessage) return;
 
     final userMessage = _controller.text;
     setState(() {
@@ -197,12 +199,12 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       String response;
       if (_firstMessage) {
-        response = await initialMessage(env.systemMessage);
+        response = await initialMessage();
         _firstMessage = false;
       } else {
-        response = await respond(userMessage, env.systemMessage);
+        response = await respond();
       }
-      messages.add({"role": "assistent", "content": response});
+      messages.add({"role": "assistant", "content": response});
       Uint8List voice = await tts(response);
       setState(() {
         _isLoading = false;
@@ -227,6 +229,7 @@ class _ChatScreenState extends State<ChatScreen> {
         case ',':
         case '-':
         case '—':
+        case ':':
           delay = 500;
           break;
         case '!':
@@ -235,7 +238,7 @@ class _ChatScreenState extends State<ChatScreen> {
           delay = 1000;
           break;
         default:
-          delay = 40;
+          delay = 50;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
@@ -332,6 +335,17 @@ class _ChatScreenState extends State<ChatScreen> {
                 IconButton(
                   icon: const Icon(Icons.send),
                   onPressed: _sendMessage,
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      if (_firstMessage) {
+                        _sendMessage();
+                        suggestedMessage = "Ad beneficium omnium!";
+                      }
+                    });
+                  },
+                  child: Text(suggestedMessage),
                 ),
               ],
             ),
