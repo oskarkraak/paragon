@@ -22,7 +22,7 @@ Future<String> respond(String userInput, String systemMessage) async {
     'Content-Type': 'application/json',
   };
   final body = {
-    "model": "gpt-4o-mini",
+    "model": "gpt-4o",
     "messages": [
       {"role": "system", "content": systemMessage},
       {
@@ -39,10 +39,10 @@ Future<String> respond(String userInput, String systemMessage) async {
   if (response.statusCode == 200) {
     var responseBody = utf8.decode(response.bodyBytes);
     responseBody = jsonDecode(responseBody)["choices"][0]["message"]["content"];
-    print("GPT-4o-mini response: $responseBody");
+    print("GPT-4o response: $responseBody");
     return responseBody;
   } else {
-    throw Exception("Failed to prompt GPT-4");
+    throw Exception("Failed to prompt GPT-4o");
   }
 }
 
