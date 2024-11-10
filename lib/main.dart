@@ -7,11 +7,14 @@ import 'firebase_options.dart';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:flutter_soloud/flutter_soloud.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'env.dart' as env;
 
 var messages = [
   {"role": "system", "content": env.systemMessage}
 ];
+late String memory;
+late final prefs;
 bool _isLoading = false;
 late final String _firstText;
 late final Uint8List _firstTts;
@@ -20,7 +23,71 @@ String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
 }
 
-void stop() {}
+void stop(BuildContext context) async {
+  // Show a dialog asking the user if they want to modify the memory string
+  showDialog(
+    context: context, // You need to pass the context from where you call stop
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Modify Memory'),
+        content: Text('Do you want to modify the memory?'),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
+            child: Text('No'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop(); // Close the dialog
+              // Show input dialog for editing the memory
+              String? newMemory = await _editMemoryDialog(context, memory);
+              if (newMemory != null && newMemory.isNotEmpty) {
+                await prefs.setString('memory', newMemory);
+                print("Memory updated to: $newMemory");
+              }
+            },
+            child: Text('Yes'),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+// Function to show an input dialog for editing memory
+Future<String?> _editMemoryDialog(
+    BuildContext context, String currentMemory) async {
+  final TextEditingController controller =
+      TextEditingController(text: currentMemory);
+
+  return showDialog<String>(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: Text('Edit Memory'),
+        content: TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Enter new memory text...',
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
+            child: Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context)
+                  .pop(controller.text); // Return the new memory
+            },
+            child: Text('Save'),
+          ),
+        ],
+      );
+    },
+  );
+}
 
 // Function to send the initial message from the AI using a unique system message
 Future<String> initialMessage() async {
@@ -34,11 +101,11 @@ Future<String> initialMessage() async {
   final body = {
     "model": "gpt-4o",
     "messages": [
-      {"role": "system", "content": env.systemMessage},
+      messages,
       {
         "role": "system",
         "content":
-            "This is your first interaction with this user. Let's begin by setting the stage for an interesting conversation. Keep it concise."
+            "Let's begin by setting the stage for an interesting conversation. Keep it concise."
       }
     ]
   };
@@ -52,6 +119,28 @@ Future<String> initialMessage() async {
     return responseBody;
   } else {
     throw Exception("Failed to prompt GPT-4o for initial message");
+  }
+}
+
+Future<String> updateMemory() async {
+  final apiKey = getOpenaiApiKey();
+
+  final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+  final headers = {
+    'Authorization': 'Bearer $apiKey',
+    'Content-Type': 'application/json',
+  };
+  final body = {"model": "gpt-4o", "messages": messages};
+
+  final response =
+      await http.post(url, headers: headers, body: jsonEncode(body));
+  if (response.statusCode == 200) {
+    var responseBody = utf8.decode(response.bodyBytes);
+    responseBody = jsonDecode(responseBody)["choices"][0]["message"]["content"];
+    print("GPT-4o response: $responseBody");
+    return responseBody;
+  } else {
+    throw Exception("Failed to prompt GPT-4o");
   }
 }
 
@@ -140,8 +229,24 @@ void main() async {
   );
   SoLoud.instance.init();
   changeVoice();
+  await loadMemory();
   prepareFirstMessage();
   runApp(const MyApp());
+}
+
+Future<void> loadMemory() async {
+  prefs = await SharedPreferences.getInstance();
+  memory = prefs.getString('memory') ?? "";
+
+  String message;
+  if (memory == "") {
+    message =
+        "This is your first interaction with this user. Start with an introduction. Keep it concise.";
+  } else {
+    message =
+        "From previous interactions, you know the following about the user:\n\n$memory";
+  }
+  messages.add({"role": "system", "content": message});
 }
 
 void prepareFirstMessage() async {
@@ -362,7 +467,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         setState(() {
-                          stop();
+                          stop(context);
                         });
                       },
                       style: const ButtonStyle(
