@@ -107,16 +107,13 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  SoLoud.instance.init();
+  changeVoice();
   runApp(const MyApp());
 }
 
-void doThing() async {
-  await SoLoud.instance.init();
-  changeVoice();
-
-  final response = await respond(env.userInput, env.systemMessage);
-  Uint8List voice = await tts(response);
-  SoundHandle soundHandle = await playAudio(voice);
+void say(Uint8List audio) async {
+  SoundHandle soundHandle = await playAudio(audio);
   SoLoud.instance.setRelativePlaySpeed(soundHandle, 0.7);
 }
 
@@ -172,10 +169,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final response = await respond(userMessage, env.systemMessage);
+      Uint8List voice = await tts(response);
       setState(() {
         _isLoading = false;
       });
       // Call method to display the response gradually
+      say(voice);
       _addMessageGradually(response, "assistant");
     } catch (e) {
       setState(() {
@@ -202,7 +201,7 @@ class _ChatScreenState extends State<ChatScreen> {
           delay = 1000;
           break;
         default:
-          delay = 100;
+          delay = 40;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
