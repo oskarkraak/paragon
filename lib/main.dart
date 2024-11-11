@@ -131,8 +131,8 @@ Future<String> initialMessage() async {
   );
 
   var chat = model.startChat(history: toGeminiHistory(messages));
-  final content = Content.text(
-      "SYSTEM (DO NOT REFER TO THIS MESSAGE): <Let's begin with an interesting conversation.>");
+  final content =
+      Content.text(memory.isEmpty ? "Who are you?" : "What do you want?");
 
   final response = await chat.sendMessage(content);
   var s = response.text;
@@ -180,7 +180,7 @@ Future<String> updateMemory() async {
 
   var chat = model.startChat(history: toGeminiHistory(messages));
   final content = Content.text(
-      "SYSTEM (DO NOT REFER TO THIS MESSAGE): <You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory>");
+      "You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory");
 
   final response = await chat.sendMessage(content);
   var s = response.text;
