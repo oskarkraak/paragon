@@ -11,8 +11,9 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'env.dart' as env;
+import 'package:google_generative_ai/google_generative_ai.dart';
 
-var messages = [
+List<Map<String, String>> messages = [
   {"role": "system", "content": env.systemMessage}
 ];
 late String memory;
@@ -24,6 +25,30 @@ Uint8List? _firstTts;
 
 String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
+}
+
+String getGeminiApiKey() {
+  return env.GEMINI_API_KEY;
+}
+
+List<Content> toGeminiHistory(List<Map<String, String>> messages) {
+  List<Content> history = [];
+  for (var message in messages) {
+    String role = message["role"]!;
+    String content = message["content"]!;
+    Content c;
+    if (role == "system") {
+      // system isnt allowed outside the initial system message
+      //c = Content.system(content);
+    } else if (role == "assistant") {
+      c = Content.model([TextPart(content)]);
+      history.add(c);
+    } else {
+      c = Content.text(content);
+      history.add(c);
+    }
+  }
+  return history;
 }
 
 void stop(BuildContext context) async {
@@ -99,6 +124,22 @@ Future<String?> _editMemoryDialog(
 
 // Function to send the initial message from the AI using a unique system message
 Future<String> initialMessage() async {
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash',
+    apiKey: getGeminiApiKey(),
+    systemInstruction: Content.system(env.systemMessage),
+  );
+
+  var chat = model.startChat(history: toGeminiHistory(messages));
+  final content = Content.text(
+      "SYSTEM: <Let's begin by setting the stage for an interesting conversation.>");
+
+  final response = await chat.sendMessage(content);
+  var s = response.text;
+  print("Gemini: $s");
+  return response.text!.trim();
+
+/*
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -127,9 +168,26 @@ Future<String> initialMessage() async {
   } else {
     throw Exception("Failed to prompt GPT-4o for initial message");
   }
+  */
 }
 
 Future<String> updateMemory() async {
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash',
+    apiKey: getGeminiApiKey(),
+    systemInstruction: Content.system(env.systemMessage),
+  );
+
+  var chat = model.startChat(history: toGeminiHistory(messages));
+  final content = Content.text(
+      "SYSTEM: <You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory>");
+
+  final response = await chat.sendMessage(content);
+  var s = response.text;
+  print("Gemini: $s");
+  return response.text!.trim();
+
+  /*
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -155,9 +213,24 @@ Future<String> updateMemory() async {
   } else {
     throw Exception("Failed to prompt GPT-4o");
   }
+  */
 }
 
 Future<String> respond() async {
+  final model = GenerativeModel(
+    model: 'gemini-1.5-flash',
+    apiKey: getGeminiApiKey(),
+    systemInstruction: Content.system(env.systemMessage),
+  );
+  var history = toGeminiHistory(messages);
+  var last = history.removeLast();
+  var chat = model.startChat(history: history);
+  final response = await chat.sendMessage(last);
+  var s = response.text;
+  print("Gemini: $s");
+  return response.text!.trim();
+
+  /*
   final apiKey = getOpenaiApiKey();
 
   final url = Uri.parse('https://api.openai.com/v1/chat/completions');
@@ -177,6 +250,7 @@ Future<String> respond() async {
   } else {
     throw Exception("Failed to prompt GPT-4o");
   }
+  */
 }
 
 Future<Uint8List> tts(String inputText) async {
@@ -371,7 +445,10 @@ class _ChatScreenState extends State<ChatScreen> {
           delay = 1000;
           break;
         default:
-          delay = 55;
+          // GPT-40
+          //delay = 55;
+          // Gemini
+          delay = 50;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
