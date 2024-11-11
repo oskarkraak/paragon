@@ -132,7 +132,7 @@ Future<String> initialMessage() async {
 
   var chat = model.startChat(history: toGeminiHistory(messages));
   final content = Content.text(
-      "SYSTEM: <Let's begin by setting the stage for an interesting conversation.>");
+      "SYSTEM (DO NOT REFER TO THIS MESSAGE): <Let's begin with an interesting conversation.>");
 
   final response = await chat.sendMessage(content);
   var s = response.text;
@@ -180,7 +180,7 @@ Future<String> updateMemory() async {
 
   var chat = model.startChat(history: toGeminiHistory(messages));
   final content = Content.text(
-      "SYSTEM: <You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory>");
+      "SYSTEM (DO NOT REFER TO THIS MESSAGE): <You had this conversation. What should you remember about the user?\nEdit this text of your previous memories. If there is nothing new to add, just output the text again.\n$memory>");
 
   final response = await chat.sendMessage(content);
   var s = response.text;
@@ -392,7 +392,6 @@ class _ChatScreenState extends State<ChatScreen> {
     String response;
     Uint8List voice;
     if (_firstMessage) {
-      _firstMessage = false;
       while (_firstText == null || _firstTts == null) {
         await Future.delayed(const Duration(milliseconds: 100));
       }
@@ -423,6 +422,7 @@ class _ChatScreenState extends State<ChatScreen> {
     messages.add({"role": "assistant", "content": response});
     setState(() {
       _isLoading = false;
+      _firstMessage = false;
     });
     say(voice);
     _addMessageGradually(response, "assistant");
@@ -445,10 +445,7 @@ class _ChatScreenState extends State<ChatScreen> {
           delay = 1000;
           break;
         default:
-          // GPT-40
-          //delay = 55;
-          // Gemini
-          delay = 50;
+          delay = 55;
       }
       await Future.delayed(
           Duration(milliseconds: delay)); // Delay to simulate typing
@@ -472,7 +469,7 @@ class _ChatScreenState extends State<ChatScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text('paragon'),
-            const Text('alpha v1', style: TextStyle(fontSize: 12)),
+            const Text('alpha v2', style: TextStyle(fontSize: 12)),
           ],
         ),
       ),
@@ -566,7 +563,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       },
                       style: const ButtonStyle(
                           backgroundColor: WidgetStatePropertyAll(Colors.grey)),
-                      child: const Text("Ad beneficium omnium!",
+                      child: const Text(
+                          "End conversation", //"Ad beneficium omnium!",
                           style: TextStyle(color: Colors.black)),
                     ),
                   ),
