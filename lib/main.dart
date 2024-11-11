@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print
+
 import 'dart:convert';
 import 'dart:async';
 
@@ -14,10 +16,11 @@ var messages = [
   {"role": "system", "content": env.systemMessage}
 ];
 late String memory;
+// ignore: prefer_typing_uninitialized_variables
 late final prefs;
 bool _isLoading = false;
-late final String _firstText;
-late final Uint8List _firstTts;
+String? _firstText;
+Uint8List? _firstTts;
 
 String getOpenaiApiKey() {
   return env.OPENAI_API_KEY;
@@ -33,8 +36,8 @@ void stop(BuildContext context) async {
     context: context, // You need to pass the context from where you call stop
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Modify Memory'),
-        content: Text('Do you want to modify the memory?'),
+        title: const Text('Modify Memory'),
+        content: const Text('Do you want to modify the memory?'),
         actions: <Widget>[
           TextButton(
               onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
@@ -51,7 +54,7 @@ void stop(BuildContext context) async {
               await prefs.setString('memory', newMemory);
               print("Memory updated to: $newMemory");
             },
-            child: Text('Yes', style: TextStyle(color: Colors.white)),
+            child: const Text('Yes', style: TextStyle(color: Colors.white)),
           ),
         ],
       );
@@ -69,24 +72,24 @@ Future<String?> _editMemoryDialog(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Edit Memory'),
+        title: const Text('Edit Memory'),
         content: TextField(
           controller: controller,
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             hintText: 'Enter new memory text...',
           ),
         ),
         actions: <Widget>[
           TextButton(
             onPressed: () => Navigator.of(context).pop(), // Dismiss dialog
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
               Navigator.of(context)
                   .pop(controller.text); // Return the new memory
             },
-            child: Text('Save'),
+            child: const Text('Save'),
           ),
         ],
       );
@@ -247,6 +250,8 @@ void main() async {
 Future<void> loadMemory() async {
   prefs = await SharedPreferences.getInstance();
   memory = prefs.getString('memory') ?? "";
+  memory = "";
+  print("loaded memory:$memory");
 
   String message;
   if (memory == "") {
@@ -259,9 +264,9 @@ Future<void> loadMemory() async {
   messages.add({"role": "system", "content": message});
 }
 
-void prepareFirstMessage() async {
+Future<void> prepareFirstMessage() async {
   _firstText = await initialMessage();
-  _firstTts = await tts(_firstText);
+  _firstTts = await tts(_firstText!);
 }
 
 void say(Uint8List audio) async {
@@ -314,8 +319,11 @@ class _ChatScreenState extends State<ChatScreen> {
     Uint8List voice;
     if (_firstMessage) {
       _firstMessage = false;
-      response = _firstText;
-      voice = _firstTts;
+      while (_firstText == null || _firstTts == null) {
+        await Future.delayed(const Duration(milliseconds: 100));
+      }
+      response = _firstText!;
+      voice = _firstTts!;
     } else {
       if (_controller.text.isEmpty) return;
 
@@ -466,7 +474,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-          if (!_firstMessage)
+          if (!_firstMessage && !_isLoading)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
@@ -487,7 +495,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ],
               ),
             ),
-          if (!_firstMessage)
+          if (!_firstMessage && !_isLoading)
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
