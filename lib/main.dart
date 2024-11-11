@@ -256,7 +256,7 @@ Future<void> loadMemory() async {
   String message;
   if (memory == "") {
     message =
-        "This is your first interaction with this user. Start with an introduction. Keep it concise.";
+        "This is your first interaction with this user. Start with an introduction.";
   } else {
     message =
         "From previous interactions, you know the following about the user:\n\n$memory";
@@ -467,7 +467,8 @@ class _ChatScreenState extends State<ChatScreen> {
                       style: const ButtonStyle(
                           backgroundColor:
                               WidgetStatePropertyAll(Colors.white)),
-                      child: const Text("Who are you?",
+                      child: Text(
+                          memory.isEmpty ? "Who are you?" : "What do you want?",
                           style: TextStyle(color: Colors.black)),
                     ),
                   ),
